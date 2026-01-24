@@ -39,10 +39,12 @@ export default function ProfilePage() {
       setLearnedCount(learned?.length ?? 0);
       setSavedCount(saved?.length ?? 0);
 
-      const learnedCategories = (learned ?? []).flatMap((row: { lesson?: { category?: unknown } }) => {
-        const category = row.lesson?.category;
-        return typeof category === "string" && category.length ? [category] : [];
-      });
+      const learnedCategories = (learned ?? [])
+        .map((row: { lesson?: Array<{ category?: unknown }> }) => {
+          const category = row.lesson?.[0]?.category;
+          return typeof category === "string" ? category : null;
+        })
+        .filter((category): category is string => Boolean(category));
 
       setCategories(Array.from(new Set(learnedCategories)));
     };
