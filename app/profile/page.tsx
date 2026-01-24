@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsMessage, setPrefsMessage] = useState<string | null>(null);
+  const [calendarDates, setCalendarDates] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -67,6 +68,22 @@ export default function ProfilePage() {
         .filter((category): category is string => Boolean(category));
 
       setCategories(Array.from(new Set(learnedCategories)));
+
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      const { data: learnedDates } = await supabase
+        .from("user_lesson_actions")
+        .select("created_at")
+        .eq("user_id", user.id)
+        .eq("action", "learned")
+        .gte("created_at", monthStart.toISOString())
+        .lt("created_at", monthEnd.toISOString());
+
+      const dateSet = new Set(
+        (learnedDates ?? []).map((row) => new Date(row.created_at as string).toISOString().slice(0, 10))
+      );
+      setCalendarDates(dateSet);
     };
 
     void loadProfile();
@@ -189,6 +206,23 @@ export default function ProfilePage() {
     [streak, learnedCount, savedCount, categories]
   );
 
+  const calendar = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const leadingEmpty = firstDay.getDay();
+    const totalDays = lastDay.getDate();
+    const days = Array.from({ length: totalDays }, (_, i) => i + 1);
+    return {
+      year,
+      month,
+      leadingEmpty,
+      days
+    };
+  }, []);
+
   async function handleSavePreferences() {
     setPrefsSaving(true);
     setPrefsMessage(null);
@@ -279,6 +313,35 @@ export default function ProfilePage() {
               {prefsSaving ? "Saving..." : "Save preferences"}
             </button>
             {prefsMessage ? <span className="text-sm text-ink-700">{prefsMessage}</span> : null}
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+          <h2 className="text-lg font-semibold text-ink-900">Streak calendar</h2>
+          <p className="mt-2 text-sm text-ink-700">Days you learned this month.</p>
+          <div className="mt-4 grid grid-cols-7 gap-2 text-xs font-semibold text-ink-700">
+            {["S", "M", "T", "W", "T", "F", "S"].map((label) => (
+              <div key={label} className="text-center">{label}</div>
+            ))}
+          </div>
+          <div className="mt-2 grid grid-cols-7 gap-2">
+            {Array.from({ length: calendar.leadingEmpty }).map((_, index) => (
+              <div key={`empty-${index}`} />
+            ))}
+            {calendar.days.map((day) => {
+              const dateString = new Date(calendar.year, calendar.month, day).toISOString().slice(0, 10);
+              const learned = calendarDates.has(dateString);
+              return (
+                <div
+                  key={day}
+                  className={`flex h-9 items-center justify-center rounded-full text-sm ${
+                    learned ? "bg-mint-500 text-ink-900" : "bg-ink-900/5 text-ink-700"
+                  }`}
+                >
+                  {day}
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -46,6 +46,13 @@ export default function AdminPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [importText, setImportText] = useState("");
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersCount, setUsersCount] = useState<number | null>(null);
+  const [usersList, setUsersList] = useState<Array<{ id: string; email: string | null; created_at: string }>>([]);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [lessonsCount, setLessonsCount] = useState<number | null>(null);
+  const [signupSeries, setSignupSeries] = useState<Array<{ label: string; value: number }>>([]);
+  const [lessonSeries, setLessonSeries] = useState<Array<{ label: string; value: number }>>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -67,6 +74,69 @@ export default function AdminPage() {
 
     void init();
   }, [router]);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      if (!isAdmin) return;
+      setUsersLoading(true);
+      setUsersError(null);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        setUsersError("Missing session token.");
+        setUsersLoading(false);
+        return;
+      }
+
+      const response = await fetch("/api/admin/users", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        setUsersError("Failed to load users.");
+        setUsersLoading(false);
+        return;
+      }
+      const payload = (await response.json()) as {
+        total: number;
+        users: Array<{ id: string; email: string | null; created_at: string }>;
+      };
+      setUsersCount(payload.total);
+      setUsersList(payload.users);
+
+      const last7: Array<{ label: string; value: number }> = [];
+      const now = new Date();
+      for (let i = 6; i >= 0; i -= 1) {
+        const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+        const label = date.toLocaleDateString("en-US", { weekday: "short" });
+        last7.push({ label, value: 0 });
+      }
+      for (const user of payload.users) {
+        const created = new Date(user.created_at);
+        const diffDays = Math.floor((now.getTime() - created.getTime()) / 86400000);
+        if (diffDays >= 0 && diffDays <= 6) {
+          const index = 6 - diffDays;
+          last7[index].value += 1;
+        }
+      }
+      setSignupSeries(last7);
+
+      const { data: lessons, count } = await supabase.from("lessons").select("category", { count: "exact" });
+      setLessonsCount(count ?? null);
+      const byCategory: Record<string, number> = {};
+      for (const row of lessons ?? []) {
+        const category = row.category ?? "Other";
+        byCategory[category] = (byCategory[category] ?? 0) + 1;
+      }
+      const lessonSeriesData = Object.entries(byCategory)
+        .map(([label, value]) => ({ label, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6);
+      setLessonSeries(lessonSeriesData);
+      setUsersLoading(false);
+    };
+
+    void loadUsers();
+  }, [isAdmin]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -183,9 +253,78 @@ export default function AdminPage() {
 
   return (
     <main className="min-h-screen bg-noise px-6 pb-32 pt-12">
-      <div className="mx-auto max-w-3xl">
-        <h1 className="text-2xl font-semibold text-ink-900">Admin studio</h1>
-        <p className="mt-2 text-sm text-ink-700">Create new lessons or import a JSON batch.</p>
+      <div className="mx-auto max-w-5xl">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold text-ink-900">Admin dashboard</h1>
+            <p className="mt-2 text-sm text-ink-700">Manage lessons and monitor your learning community.</p>
+          </div>
+          <div className="rounded-full border border-ink-900/10 bg-white px-4 py-2 text-xs font-semibold text-ink-700">
+            SwipeLearn Studio
+          </div>
+        </div>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-700">Users</p>
+            <p className="mt-3 text-2xl font-semibold text-ink-900">{usersCount ?? "—"}</p>
+            <p className="mt-2 text-sm text-ink-700">Total accounts</p>
+          </div>
+          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-700">Lessons</p>
+            <p className="mt-3 text-2xl font-semibold text-ink-900">{lessonsCount ?? "—"}</p>
+            <p className="mt-2 text-sm text-ink-700">In the library</p>
+          </div>
+          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-700">Imports</p>
+            <p className="mt-3 text-2xl font-semibold text-ink-900">{importResult?.inserted ?? 0}</p>
+            <p className="mt-2 text-sm text-ink-700">Latest batch</p>
+          </div>
+          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-ink-700">Status</p>
+            <p className="mt-3 text-2xl font-semibold text-ink-900">{usersLoading ? "Syncing" : "Healthy"}</p>
+            <p className="mt-2 text-sm text-ink-700">Supabase</p>
+          </div>
+        </div>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+            <h2 className="text-lg font-semibold text-ink-900">Signups (7 days)</h2>
+            <p className="mt-2 text-sm text-ink-700">New users by day.</p>
+            <div className="mt-4 grid grid-cols-7 items-end gap-3">
+              {signupSeries.map((point) => (
+                <div key={point.label} className="flex flex-col items-center gap-2">
+                  <div
+                    className="w-8 rounded-full bg-mint-500/60"
+                    style={{ height: `${Math.max(12, point.value * 18)}px` }}
+                  />
+                  <span className="text-[11px] font-semibold text-ink-700">{point.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+            <h2 className="text-lg font-semibold text-ink-900">Lessons by category</h2>
+            <p className="mt-2 text-sm text-ink-700">Top categories in your library.</p>
+            <div className="mt-4 space-y-3">
+              {lessonSeries.map((item) => (
+                <div key={item.label} className="space-y-2">
+                  <div className="flex items-center justify-between text-xs font-semibold text-ink-700">
+                    <span>{item.label}</span>
+                    <span>{item.value}</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-ink-900/10">
+                    <div
+                      className="h-2 rounded-full bg-ink-900"
+                      style={{ width: `${Math.min(100, item.value * 12)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {!lessonSeries.length && <p className="text-sm text-ink-700">No lessons yet.</p>}
+            </div>
+          </div>
+        </section>
 
         <section className="mt-8 rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
           <h2 className="text-lg font-semibold text-ink-900">Create a lesson</h2>
@@ -324,6 +463,34 @@ export default function AdminPage() {
               <span className="text-sm text-ink-700">Imported {importResult.inserted} lessons.</span>
             ) : null}
           </div>
+        </section>
+
+        <section className="mt-8 rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+          <h2 className="text-lg font-semibold text-ink-900">Users</h2>
+          <p className="mt-2 text-sm text-ink-700">Total registered users and recent signups.</p>
+          <div className="mt-4 text-sm text-ink-700">
+            {usersLoading && "Loading users..."}
+            {!usersLoading && usersError && usersError}
+            {!usersLoading && !usersError && usersCount !== null && (
+              <span>Total users: {usersCount}</span>
+            )}
+          </div>
+          {!usersLoading && usersList.length > 0 && (
+            <div className="mt-4 overflow-hidden rounded-2xl border border-ink-900/10">
+              <div className="grid grid-cols-[1.6fr_1fr] gap-2 bg-ink-900/5 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-ink-700">
+                <span>Email</span>
+                <span>Joined</span>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {usersList.map((user) => (
+                  <div key={user.id} className="grid grid-cols-[1.6fr_1fr] gap-2 border-t border-ink-900/5 px-4 py-2 text-sm text-ink-900">
+                    <span>{user.email ?? "No email"}</span>
+                    <span>{new Date(user.created_at).toLocaleDateString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
       </div>
     </main>
