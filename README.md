@@ -52,6 +52,7 @@ Email/password via Supabase Auth (client-side). Ensure email auth is enabled in 
 - Streak updates when a user marks at least one lesson as learned each day.
 - Use keyboard arrows on `/learn`: left = skip, right = learned, up = deep dive.
 - PWA install works when hosted over HTTPS and `public/manifest.json` is reachable. Replace the SVG icon with PNG sizes for best install support.
+- New users pick categories on `/onboarding` to personalize their deck.
 
 ## Push notifications (PWA)
 1) Generate VAPID keys (locally):

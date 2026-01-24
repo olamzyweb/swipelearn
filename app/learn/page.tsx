@@ -60,6 +60,17 @@ export default function LearnPage() {
         lessonsQuery = lessonsQuery.not("id", "in", formatted);
       }
 
+      const { data: profile } = await supabase
+        .from("user_profile")
+        .select("preferred_categories")
+        .eq("user_id", userId)
+        .single();
+
+      const preferred = profile?.preferred_categories;
+      if (Array.isArray(preferred) && preferred.length > 0) {
+        lessonsQuery = lessonsQuery.in("category", preferred);
+      }
+
       const { data: lessonsData } = await lessonsQuery;
       setLessons((lessonsData as Lesson[]) ?? []);
       setLoading(false);

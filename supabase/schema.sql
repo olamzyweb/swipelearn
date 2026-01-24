@@ -49,8 +49,12 @@ create table if not exists public.user_profile (
   user_id uuid primary key references auth.users(id) on delete cascade,
   streak_count int not null default 0,
   last_learned_date date,
+  preferred_categories jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now()
 );
+
+alter table public.user_profile
+  add column if not exists preferred_categories jsonb not null default '[]'::jsonb;
 
 create table if not exists public.admin_users (
   user_id uuid primary key references auth.users(id) on delete cascade,

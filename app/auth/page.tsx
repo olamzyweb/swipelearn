@@ -19,11 +19,26 @@ export default function AuthPage() {
   async function handleLogin() {
     setLoading(true);
     setMessage(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       setMessage(error.message);
     } else {
-      router.push("/learn");
+      const userId = data.user?.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("user_profile")
+          .select("preferred_categories")
+          .eq("user_id", userId)
+          .single();
+        const prefs = profile?.preferred_categories;
+        if (Array.isArray(prefs) && prefs.length > 0) {
+          router.push("/learn");
+        } else {
+          router.push("/onboarding");
+        }
+      } else {
+        router.push("/learn");
+      }
     }
     setLoading(false);
   }
@@ -31,12 +46,20 @@ export default function AuthPage() {
   async function handleRegister() {
     setLoading(true);
     setMessage(null);
-    const { error } = await supabase.auth.signUp({ email, password });
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: redirectTo }
+    });
     if (error) {
       setMessage(error.message);
     } else {
-      setMessage("Check your email to confirm your account.");
-      router.push("/learn");
+      if (data.session?.user) {
+        router.push("/onboarding");
+      } else {
+        setMessage("Check your email to confirm your account.");
+      }
     }
     setLoading(false);
   }

@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Lesson } from "@/lib/types";
 
 export default function ProfilePage() {
+  const [email, setEmail] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [learnedCount, setLearnedCount] = useState(0);
   const [savedCount, setSavedCount] = useState(0);
@@ -16,19 +17,33 @@ export default function ProfilePage() {
   const [reminderTime, setReminderTime] = useState("20:00");
   const [pushEnabled, setPushEnabled] = useState(false);
   const [pushStatus, setPushStatus] = useState<string | null>(null);
+  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsMessage, setPrefsMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
       if (!user) return;
+      setEmail(user.email ?? null);
 
       const { data: profile } = await supabase
         .from("user_profile")
-        .select("streak_count")
+        .select("streak_count,preferred_categories")
         .eq("user_id", user.id)
         .single();
       setStreak(profile?.streak_count ?? 0);
+      if (Array.isArray(profile?.preferred_categories)) {
+        setSelectedCategories(profile?.preferred_categories);
+      }
+
+      const { data: lessonCategories } = await supabase.from("lessons").select("category");
+      const uniqueCategories = Array.from(
+        new Set((lessonCategories ?? []).map((item) => item.category).filter(Boolean))
+      );
+      setAllCategories(uniqueCategories);
 
       const { data: learned } = await supabase
         .from("user_lesson_actions")
@@ -174,11 +189,41 @@ export default function ProfilePage() {
     [streak, learnedCount, savedCount, categories]
   );
 
+  async function handleSavePreferences() {
+    setPrefsSaving(true);
+    setPrefsMessage(null);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user) {
+      setPrefsMessage("Sign in to update preferences.");
+      setPrefsSaving(false);
+      return;
+    }
+
+    const { error } = await supabase.from("user_profile").upsert({
+      user_id: user.id,
+      preferred_categories: selectedCategories
+    });
+
+    if (error) {
+      setPrefsMessage(error.message);
+    } else {
+      setPrefsMessage("Preferences updated.");
+      setTimeout(() => setPrefsMessage(null), 2000);
+    }
+    setPrefsSaving(false);
+  }
+
   return (
     <main className="min-h-screen bg-noise px-6 pb-32 pt-12">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-2xl font-semibold text-ink-900">Your progress</h1>
         <p className="mt-2 text-sm text-ink-700">Track streaks, saved lessons, and topics you have learned.</p>
+        {email ? (
+          <div className="mt-3 inline-flex rounded-full border border-ink-900/10 bg-white px-4 py-2 text-xs font-semibold text-ink-700">
+            {email}
+          </div>
+        ) : null}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {stats.map((stat) => (
@@ -194,6 +239,47 @@ export default function ProfilePage() {
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-8 rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
+          <h2 className="text-lg font-semibold text-ink-900">Your categories</h2>
+          <p className="mt-2 text-sm text-ink-700">Update your learning focus anytime.</p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            {allCategories.map((category) => {
+              const active = selectedCategories.includes(category);
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() =>
+                    setSelectedCategories((prev) =>
+                      prev.includes(category)
+                        ? prev.filter((item) => item !== category)
+                        : [...prev, category]
+                    )
+                  }
+                  className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                    active
+                      ? "border-ink-900 bg-ink-900 text-white"
+                      : "border-ink-900/10 bg-white text-ink-900 hover:bg-cloud-100"
+                  }`}
+                >
+                  {category}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleSavePreferences}
+              className="inline-flex items-center gap-2 rounded-full border border-ink-900/10 bg-white px-4 py-2 text-sm font-semibold text-ink-900 shadow-sm transition hover:bg-cloud-100"
+              disabled={prefsSaving}
+            >
+              {prefsSaving ? "Saving..." : "Save preferences"}
+            </button>
+            {prefsMessage ? <span className="text-sm text-ink-700">{prefsMessage}</span> : null}
+          </div>
         </div>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
