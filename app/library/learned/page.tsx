@@ -23,7 +23,10 @@ export default function LearnedLibraryPage() {
         .eq("action", "learned")
         .order("created_at", { ascending: false });
 
-      const mapped = (data ?? []).map((row) => row.lesson as Lesson).filter(Boolean);
+      type LessonRow = { lesson: Lesson | null };
+      const mapped = ((data ?? []) as LessonRow[])
+        .map((row) => row.lesson)
+        .filter((lesson): lesson is Lesson => Boolean(lesson));
       setLessons(mapped);
     };
 
