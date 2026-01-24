@@ -10,6 +10,17 @@ import { Badge } from "@/components/ui/badge";
 export default function LearnedLibraryPage() {
   const [lessons, setLessons] = useState<Lesson[]>([]);
 
+  function isLesson(value: unknown): value is Lesson {
+    if (!value || typeof value !== "object") return false;
+    const lesson = value as Lesson;
+    return (
+      typeof lesson.id === "string" &&
+      typeof lesson.title === "string" &&
+      typeof lesson.category === "string" &&
+      typeof lesson.difficulty === "string"
+    );
+  }
+
   useEffect(() => {
     const loadLearned = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -23,9 +34,9 @@ export default function LearnedLibraryPage() {
         .eq("action", "learned")
         .order("created_at", { ascending: false });
 
-      type LessonRow = { lesson: Lesson | null };
-      const rows = (data ?? []) as unknown as LessonRow[];
-      const mapped = rows.map((row) => row.lesson).filter((lesson): lesson is Lesson => Boolean(lesson));
+      const mapped = (data ?? []).flatMap((row: { lesson?: unknown }) =>
+        isLesson(row.lesson) ? [row.lesson] : []
+      );
       setLessons(mapped);
     };
 
