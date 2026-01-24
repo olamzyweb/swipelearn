@@ -1,4 +1,7 @@
-import { Code } from "lucide-react";
+﻿"use client";
+
+import { useState } from "react";
+import { Code, Share2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,12 +19,42 @@ type LessonCardProps = {
 };
 
 export function LessonCard({ lesson }: LessonCardProps) {
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
+
+  async function handleShare() {
+    const url = `${window.location.origin}/lesson/${lesson.id}`;
+    const text = `SwipeLearn: ${lesson.title}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: lesson.title, text, url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        setShareMessage("Link copied.");
+        setTimeout(() => setShareMessage(null), 2000);
+      } else {
+        window.prompt("Copy this link:", url);
+      }
+    } catch {
+      // ignore share cancel
+    }
+  }
+
   return (
     <Card className="glass-card relative h-full overflow-hidden">
       <CardHeader>
         <div className="flex items-center justify-between">
           <Badge>{lesson.category}</Badge>
-          <span className="text-xs font-semibold text-ink-700">{lesson.duration_seconds}s</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-ink-700">{lesson.duration_seconds}s</span>
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-ink-900/10 bg-white text-ink-700 transition hover:bg-cloud-100"
+              aria-label="Share lesson"
+            >
+              <Share2 className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <CardTitle className="text-xl font-semibold text-ink-900">
           {lesson.title}
@@ -34,6 +67,7 @@ export function LessonCard({ lesson }: LessonCardProps) {
       </CardHeader>
       <CardContent className="flex flex-col gap-4 text-sm text-ink-700">
         <p>{lesson.body}</p>
+        {shareMessage ? <span className="text-xs font-semibold text-ink-700">{shareMessage}</span> : null}
         {lesson.code_snippet ? (
           <div className="rounded-2xl border border-ink-900/10 bg-ink-900/5 p-3 text-xs text-ink-900">
             <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-ink-700">

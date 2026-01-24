@@ -28,6 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${sora.variable} ${fraunces.variable}`}>
       <body className="bg-cloud-50 text-ink-900">
+        <link rel="manifest" href="/manifest.json" />
         <SiteShell>{children}</SiteShell>
       </body>
     </html>

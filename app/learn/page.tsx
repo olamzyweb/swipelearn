@@ -24,6 +24,7 @@ export default function LearnPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [reminderBanner, setReminderBanner] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -66,6 +67,25 @@ export default function LearnPage() {
 
     void loadDeck();
   }, [userId]);
+
+  useEffect(() => {
+    const enabled = localStorage.getItem("swipelearn.reminder.enabled") === "true";
+    const time = localStorage.getItem("swipelearn.reminder.time") ?? "20:00";
+    if (!enabled) return;
+
+    const today = getLocalDateString();
+    const lastShown = localStorage.getItem("swipelearn.reminder.lastShown");
+    if (lastShown === today) return;
+
+    const [hour, minute] = time.split(":").map((value) => Number(value));
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return;
+
+    const now = new Date();
+    if (now.getHours() > hour || (now.getHours() === hour && now.getMinutes() >= minute)) {
+      setReminderBanner(true);
+      localStorage.setItem("swipelearn.reminder.lastShown", today);
+    }
+  }, []);
 
   useEffect(() => {
     function handleKey(event: KeyboardEvent) {
@@ -160,6 +180,11 @@ export default function LearnPage() {
           <p className="mt-3 text-sm text-ink-700">
             Swipe right to mark learned, left to skip, up for a deep dive. Use arrow keys on desktop.
           </p>
+          {reminderBanner && (
+            <div className="mt-4 rounded-2xl border border-mint-500/30 bg-mint-500/10 px-4 py-3 text-sm text-ink-900">
+              Reminder: keep your streak alive today.
+            </div>
+          )}
         </div>
 
         <SwipeDeck

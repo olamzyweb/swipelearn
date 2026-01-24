@@ -53,6 +53,26 @@ Email/password via Supabase Auth (client-side). Ensure email auth is enabled in 
 - Use keyboard arrows on `/learn`: left = skip, right = learned, up = deep dive.
 - PWA install works when hosted over HTTPS and `public/manifest.json` is reachable. Replace the SVG icon with PNG sizes for best install support.
 
+## Push notifications (PWA)
+1) Generate VAPID keys (locally):
+```bash
+npx web-push generate-vapid-keys
+```
+2) Add env vars:
+```
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=mailto:admin@yourdomain.com
+REMINDER_CRON_SECRET=...
+```
+3) Run the updated SQL schema to create `push_subscriptions`.
+4) Install the app as a PWA, then enable push in `/profile`.
+5) Schedule a daily POST to `/api/push/send-daily` with header:
+```
+Authorization: Bearer <REMINDER_CRON_SECRET>
+```
+Use your host cron, Supabase scheduled functions, or an external scheduler.
+
 ## Admin
 - Visit `/admin` to create lessons or import a JSON batch.
 - Add admins by inserting their `user_id` into `public.admin_users`.
