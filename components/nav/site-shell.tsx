@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
+import { InstallBanner } from "@/components/install/install-banner";
 import { BottomNav } from "@/components/nav/bottom-nav";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen">
       {children}
+      <InstallBanner hasBottomNav={!hideNav} />
       {!hideNav && <BottomNav />}
     </div>
   );
