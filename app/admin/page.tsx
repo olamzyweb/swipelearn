@@ -260,7 +260,7 @@ export default function AdminPage() {
             <p className="mt-2 text-sm text-ink-700">Manage lessons and monitor your learning community.</p>
           </div>
           <div className="rounded-full border border-ink-900/10 bg-white px-4 py-2 text-xs font-semibold text-ink-700">
-            SwipeLearn Studio
+            Swiple Studio
           </div>
         </div>
 

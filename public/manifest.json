@@ -1,6 +1,6 @@
 ﻿{
-  "name": "SwipeLearn",
-  "short_name": "SwipeLearn",
+  "name": "Swiple",
+  "short_name": "Swiple",
   "description": "Swipe through 60-second lessons daily.",
   "start_url": "/learn",
   "display": "standalone",

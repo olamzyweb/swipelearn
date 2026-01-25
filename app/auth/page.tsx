@@ -15,6 +15,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   async function handleLogin() {
     setLoading(true);
@@ -55,20 +56,43 @@ export default function AuthPage() {
     if (error) {
       setMessage(error.message);
     } else {
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setMessage("Account already exists. Please log in or reset your password.");
+        setLoading(false);
+        return;
+      }
       if (data.session?.user) {
         router.push("/onboarding");
       } else {
-        setMessage("Check your email to confirm your account.");
+        setMessage("Check your email to confirm your account. If you already have an account, use Login or reset your password.");
       }
     }
     setLoading(false);
+  }
+
+  async function handleResetPassword() {
+    if (!email) {
+      setMessage("Enter your email first to reset your password.");
+      return;
+    }
+    setResetLoading(true);
+    setMessage(null);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset`
+    });
+    if (error) {
+      setMessage(error.message);
+    } else {
+      setMessage("Password reset email sent. Check your inbox.");
+    }
+    setResetLoading(false);
   }
 
   return (
     <main className="min-h-screen bg-noise px-6 pb-24 pt-16">
       <div className="mx-auto w-full max-w-md rounded-3xl border border-white/60 bg-white/80 p-8 shadow-soft backdrop-blur-lg">
         <h1 className="text-3xl font-semibold text-ink-900">Welcome back</h1>
-        <p className="mt-2 text-sm text-ink-700">Sign in or create a new SwipeLearn account.</p>
+        <p className="mt-2 text-sm text-ink-700">Sign in or create a new Swiple account.</p>
 
         <Tabs defaultValue="login" className="mt-8">
           <TabsList className="w-full">
@@ -100,6 +124,14 @@ export default function AuthPage() {
               <Button className="w-full" onClick={handleLogin} disabled={loading}>
                 {loading ? "Signing in..." : "Login"}
               </Button>
+              <button
+                type="button"
+                onClick={handleResetPassword}
+                className="text-sm font-semibold text-ink-700 underline-offset-4 hover:underline"
+                disabled={resetLoading}
+              >
+                {resetLoading ? "Sending reset..." : "Forgot password?"}
+              </button>
             </div>
           </TabsContent>
           <TabsContent value="register">

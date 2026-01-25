@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Code } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
@@ -11,18 +11,27 @@ import { Badge } from "@/components/ui/badge";
 
 export default function LessonDetailPage() {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const [lesson, setLesson] = useState<Lesson | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   useEffect(() => {
     const loadLesson = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const user = sessionData.session?.user;
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
       const { data } = await supabase.from("lessons").select("*").eq("id", params.id).single();
       setLesson((data as Lesson) ?? null);
+      setCheckingAuth(false);
     };
 
     void loadLesson();
-  }, [params.id]);
+  }, [params.id, router]);
 
-  if (!lesson) {
+  if (checkingAuth || !lesson) {
     return (
       <main className="min-h-screen px-6 pb-24 pt-12">
         <div className="mx-auto max-w-2xl rounded-3xl border border-white/60 bg-white/80 p-8 shadow-soft">

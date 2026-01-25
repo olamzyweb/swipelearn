@@ -28,7 +28,7 @@ export async function POST(request: Request) {
   }
 
   const payload = JSON.stringify({
-    title: "SwipeLearn",
+    title: "Swiple",
     body: "Keep your streak alive today.",
     url: "/learn"
   });

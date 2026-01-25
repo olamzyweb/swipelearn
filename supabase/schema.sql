@@ -1,4 +1,4 @@
--- SwipeLearn Supabase schema
+-- Swiple Supabase schema
 create extension if not exists "pgcrypto";
 
 drop policy if exists "Public can read lessons" on public.lessons;

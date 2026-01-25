@@ -17,14 +17,20 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "SwipeLearn - Micro learning with a swipe",
+  title: "Swiple - Micro learning with a swipe",
   description: "Swipe through 60-second lessons daily. Save, learn, and build streaks.",
   manifest: "/manifest.json",
-  themeColor: "#0b0f1a",
   icons: [
     { rel: "icon", url: "/icons/icon.svg" },
     { rel: "apple-touch-icon", url: "/icons/icon-180.png" }
   ]
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0b0f1a"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

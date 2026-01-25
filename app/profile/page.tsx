@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BarChart3, Flame, Layers3, Share2, Trophy } from "lucide-react";
 
 import { supabase } from "@/lib/supabase/client";
 import type { Lesson } from "@/lib/types";
 
 export default function ProfilePage() {
+  const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [streak, setStreak] = useState(0);
   const [learnedCount, setLearnedCount] = useState(0);
@@ -22,12 +24,18 @@ export default function ProfilePage() {
   const [prefsSaving, setPrefsSaving] = useState(false);
   const [prefsMessage, setPrefsMessage] = useState<string | null>(null);
   const [calendarDates, setCalendarDates] = useState<Set<string>>(new Set());
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [logoutMessage, setLogoutMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const loadProfile = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
-      if (!user) return;
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
       setEmail(user.email ?? null);
 
       const { data: profile } = await supabase
@@ -84,10 +92,11 @@ export default function ProfilePage() {
         (learnedDates ?? []).map((row) => new Date(row.created_at as string).toISOString().slice(0, 10))
       );
       setCalendarDates(dateSet);
+      setCheckingAuth(false);
     };
 
     void loadProfile();
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const storedEnabled = localStorage.getItem("swipelearn.reminder.enabled");
@@ -179,11 +188,11 @@ export default function ProfilePage() {
   }
 
   async function handleShareStreak() {
-    const text = `I am on a ${streak}-day SwipeLearn streak.`;
+    const text = `I am on a ${streak}-day Swiple streak.`;
     const url = `${window.location.origin}/learn`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: "SwipeLearn Streak", text, url });
+        await navigator.share({ title: "Swiple Streak", text, url });
       } else if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(`${text} ${url}`);
         setShareStatus("Streak copied.");
@@ -194,6 +203,18 @@ export default function ProfilePage() {
     } catch {
       // ignore share cancel
     }
+  }
+
+  async function handleLogout() {
+    setLogoutLoading(true);
+    setLogoutMessage(null);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      setLogoutMessage(error.message);
+      setLogoutLoading(false);
+      return;
+    }
+    router.push("/auth");
   }
 
   const stats = useMemo(
@@ -222,6 +243,16 @@ export default function ProfilePage() {
       days
     };
   }, []);
+
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-noise px-6 pb-24 pt-16">
+        <div className="mx-auto max-w-lg rounded-3xl border border-white/60 bg-white/80 p-8 shadow-soft">
+          Loading your profile...
+        </div>
+      </main>
+    );
+  }
 
   async function handleSavePreferences() {
     setPrefsSaving(true);
@@ -358,7 +389,7 @@ export default function ProfilePage() {
 
         <div className="mt-8 rounded-3xl border border-white/60 bg-white/80 p-6 shadow-card">
           <h2 className="text-lg font-semibold text-ink-900">Daily reminder</h2>
-          <p className="mt-2 text-sm text-ink-700">We will remind you in-app once per day when you open SwipeLearn.</p>
+          <p className="mt-2 text-sm text-ink-700">We will remind you in-app once per day when you open Swiple.</p>
           <div className="mt-4 flex flex-wrap items-center gap-4">
             <label className="flex items-center gap-3 text-sm font-semibold text-ink-900">
               <input
@@ -397,6 +428,18 @@ export default function ProfilePage() {
             </button>
             {pushStatus ? <span className="text-sm text-ink-700">{pushStatus}</span> : null}
           </div>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="inline-flex items-center gap-2 rounded-full border border-coral-600 bg-coral-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-coral-700 disabled:opacity-70"
+            disabled={logoutLoading}
+          >
+            {logoutLoading ? "Signing out..." : "Sign out"}
+          </button>
+          {logoutMessage ? <span className="text-sm text-ink-700">{logoutMessage}</span> : null}
         </div>
       </div>
     </main>

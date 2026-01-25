@@ -1,6 +1,6 @@
-# SwipeLearn
+# Swiple
 
-SwipeLearn is a Tinder-style micro-learning app. Users swipe through 60-second lessons, save favorites, mark lessons learned, and build streaks.
+Swiple is a Tinder-style micro-learning app. Users swipe through 60-second lessons, save favorites, mark lessons learned, and build streaks.
 
 ## Stack
 - Next.js (App Router) + TypeScript + TailwindCSS

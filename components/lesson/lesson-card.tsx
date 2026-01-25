@@ -23,7 +23,7 @@ export function LessonCard({ lesson }: LessonCardProps) {
 
   async function handleShare() {
     const url = `${window.location.origin}/lesson/${lesson.id}`;
-    const text = `SwipeLearn: ${lesson.title}`;
+    const text = `Swiple: ${lesson.title}`;
     try {
       if (navigator.share) {
         await navigator.share({ title: lesson.title, text, url });

@@ -5,14 +5,37 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Sparkles, Star, Timer, Zap } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase/client";
 
 export default function HomePage() {
   const router = useRouter();
-  const [loadingTarget, setLoadingTarget] = useState<"auth" | "learn" | null>(null);
+  const [loadingTarget, setLoadingTarget] = useState<"auth" | "learn" | "start" | null>(null);
 
   function handleNav(target: "auth" | "learn") {
     setLoadingTarget(target);
     router.push(target === "auth" ? "/auth" : "/learn");
+  }
+
+  async function handleStartSwiping() {
+    setLoadingTarget("start");
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+    if (!user) {
+      router.push("/auth");
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("user_profile")
+      .select("preferred_categories")
+      .eq("user_id", user.id)
+      .single();
+    const prefs = profile?.preferred_categories;
+    if (Array.isArray(prefs) && prefs.length > 0) {
+      router.push("/learn");
+    } else {
+      router.push("/onboarding");
+    }
   }
 
   return (
@@ -25,7 +48,7 @@ export default function HomePage() {
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3 text-lg font-semibold">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-ink-900 text-white">SL</span>
-            SwipeLearn
+            Swiple
           </div>
           <button
             type="button"
@@ -48,12 +71,12 @@ export default function HomePage() {
               <span className="block font-display text-5xl text-ink-800 sm:text-6xl">Swipe your way to mastery.</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg text-ink-700">
-              SwipeLearn turns micro-lessons into a daily habit. Swipe to save, learn, or skip.
+              Swiple turns micro-lessons into a daily habit. Swipe to save, learn, or skip.
               Build streaks and explore new topics in under a minute.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" onClick={() => handleNav("auth")} disabled={loadingTarget !== null}>
-                {loadingTarget === "auth" ? (
+              <Button size="lg" onClick={handleStartSwiping} disabled={loadingTarget !== null}>
+                {loadingTarget === "start" ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" /> Loading
                   </>

@@ -1,6 +1,6 @@
 ﻿self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || "SwipeLearn";
+  const title = data.title || "Swiple";
   const options = {
     body: data.body || "Keep your streak alive today.",
     icon: "/icons/icon.svg",

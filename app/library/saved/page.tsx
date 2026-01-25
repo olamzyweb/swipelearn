@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { supabase } from "@/lib/supabase/client";
 import type { Lesson } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 
 export default function SavedLibraryPage() {
+  const router = useRouter();
   const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   function isLesson(value: unknown): value is Lesson {
     if (!value || typeof value !== "object") return false;
@@ -25,7 +28,10 @@ export default function SavedLibraryPage() {
     const loadSaved = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
       const user = sessionData.session?.user;
-      if (!user) return;
+      if (!user) {
+        router.push("/auth");
+        return;
+      }
 
       const { data } = await supabase
         .from("user_lesson_actions")
@@ -38,10 +44,21 @@ export default function SavedLibraryPage() {
         isLesson(row.lesson) ? [row.lesson] : []
       );
       setLessons(mapped);
+      setCheckingAuth(false);
     };
 
     void loadSaved();
-  }, []);
+  }, [router]);
+
+  if (checkingAuth) {
+    return (
+      <main className="min-h-screen bg-noise px-6 pb-24 pt-16">
+        <div className="mx-auto max-w-lg rounded-3xl border border-white/60 bg-white/80 p-8 shadow-soft">
+          Loading your saved lessons...
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-noise px-6 pb-32 pt-12">
